@@ -37,6 +37,10 @@ export async function registerWithDevStack(cfg: AppConfig): Promise<void> {
       STARGATE_NFT_CONTRACT: cfg.stargateNFTContractAddress,
       STARGATE_DELEGATION_CONTRACT: cfg.stargateContractAddress,
       NAVIGATOR_REGISTRY_CONTRACT: cfg.navigatorRegistryContractAddress,
+      X2EARN_APPS_CONTRACT: cfg.x2EarnAppsContractAddress,
+      ...(cfg.xAppReviewManagerContractAddress
+        ? { XAPP_REVIEW_MANAGER_CONTRACT: cfg.xAppReviewManagerContractAddress }
+        : {}),
       // Block-explorer aliases for the same addresses.
       SOLO_B3TR_ADDRESS: cfg.b3trContractAddress,
       SOLO_VOT3_ADDRESS: cfg.vot3ContractAddress,

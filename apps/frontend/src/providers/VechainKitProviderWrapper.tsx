@@ -90,24 +90,29 @@ export function VechainKitProviderWrapper({ children }: Props) {
           },
         },
       }}
-      privy={{
-        appId: process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
-        clientId: process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID!,
-        loginMethods: ["google", "apple", "sms", "twitter", "github", "farcaster", "discord", "tiktok", "line"],
-        appearance: {
-          loginMessage: "Select a login method",
-          logo: vechainLogo,
-        },
-        embeddedWallets: {
-          createOnLogin: "all-users",
-        },
-      }}
+      // LOCAL-STACK PATCH: skip Privy (social login) when no app id is configured.
+      privy={
+        process.env.NEXT_PUBLIC_PRIVY_APP_ID
+          ? {
+              appId: process.env.NEXT_PUBLIC_PRIVY_APP_ID!,
+              clientId: process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID!,
+              loginMethods: ["google", "apple", "sms", "twitter", "github", "farcaster", "discord", "tiktok", "line"],
+              appearance: {
+                loginMessage: "Select a login method",
+                logo: vechainLogo,
+              },
+              embeddedWallets: {
+                createOnLogin: "all-users",
+              },
+            }
+          : undefined
+      }
       feeDelegation={{
         delegatorUrl: process.env.NEXT_PUBLIC_DELEGATOR_URL!,
         delegateAllTransactions: false,
       }}
       dappKit={{
-        allowedWallets: ["veworld", "wallet-connect"],
+        allowedWallets: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID ? ["veworld", "wallet-connect"] : ["veworld"],
         walletConnectOptions: {
           projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID!,
           metadata: {
@@ -118,12 +123,16 @@ export function VechainKitProviderWrapper({ children }: Props) {
           },
         },
       }}
-      loginMethods={[
-        { method: "veworld", gridColumn: 4 },
-        { method: "google", gridColumn: 4 },
-        { method: "apple", gridColumn: 4 },
-        { method: "more", gridColumn: 4 },
-      ]}
+      loginMethods={
+        process.env.NEXT_PUBLIC_PRIVY_APP_ID
+          ? [
+              { method: "veworld", gridColumn: 4 },
+              { method: "google", gridColumn: 4 },
+              { method: "apple", gridColumn: 4 },
+              { method: "more", gridColumn: 4 },
+            ]
+          : [{ method: "veworld", gridColumn: 4 }]
+      }
       darkMode={isDarkMode}
       language={i18nInstance.language}
       onLanguageChange={handleLanguageChange}
