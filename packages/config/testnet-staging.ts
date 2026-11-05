@@ -31,7 +31,7 @@ const config: AppConfig = {
   veDelegateAutoDepositContractAddress: "0xf5DcEfC27461480A75c328402F1633c462Bece6c",
   veDelegateContractAddress: "",
   indexerUrl: "https://indexer.testnet.vechain.org/api/v1",
-  xAppReviewManagerContractAddress: "0xba00fef0e9f9fa3b52f87b791219c6f74d6e038e",
+  xAppReviewManagerContractAddress: "0xb59bb5832a6a59aec5ab4f79b3bfd7153070f384",
   nodeUrl: "https://testnet.vechain.org",
   network: {
     id: "testnet",
