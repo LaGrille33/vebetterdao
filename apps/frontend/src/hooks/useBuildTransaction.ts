@@ -13,6 +13,11 @@ export type BuildTransactionProps<ClausesParams = void> = {
   onFailure?: () => void
   transactionModalCustomUI?: TransactionCustomUI
   gasPadding?: number
+  /**
+   * Optional VIP-201 gas-payer endpoint for this transaction only. This is
+   * deliberately opt-in: do not use it to sponsor unrelated application calls.
+   */
+  delegationUrl?: string
 }
 /**
  * Custom hook for building and sending transactions.
@@ -34,6 +39,7 @@ export const useBuildTransaction = <ClausesParams = void>({
   suggestedMaxGas,
   transactionModalCustomUI = {},
   gasPadding,
+  delegationUrl,
 }: BuildTransactionProps<ClausesParams>) => {
   const { account } = useWallet()
   const queryClient = useQueryClient()
@@ -84,6 +90,7 @@ export const useBuildTransaction = <ClausesParams = void>({
     suggestedMaxGas,
     onTxFailedOrCancelled: handleOnFailure,
     gasPadding,
+    delegationUrl,
   })
 
   const transactionStatus = useMemo(() => result?.status, [result?.status])

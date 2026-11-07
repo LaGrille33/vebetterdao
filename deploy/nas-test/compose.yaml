@@ -1,0 +1,157 @@
+name: vebetterdao-nas-test
+
+# Private NAS test stack. Run only after copying DAO and indexer repos as siblings.
+# It has no dependency on the already-running scoring-pilot Compose project.
+services:
+  mongo:
+    image: mongo:8.0
+    command: [mongod, --replSet, rs0, --bind_ip_all, --keyFile, /run/mongo-keyfile]
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_password
+    secrets: [mongo_root_password]
+    volumes:
+      - mongo-data:/data/db
+      - ./config/mongo-keyfile:/run/mongo-keyfile:ro
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, "mongosh --quiet --username root --password \"$$(cat /run/secrets/mongo_root_password)\" --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: 1024m
+    logging: &logging
+      driver: json-file
+      options: { max-size: 5m, max-file: '3' }
+
+  mongo-replica-init:
+    image: mongo:8.0
+    restart: 'no'
+    depends_on:
+      mongo: { condition: service_healthy }
+    secrets: [mongo_root_password]
+    networks: [data]
+    command:
+      - bash
+      - -ec
+      - |
+        until mongosh --quiet --host mongo --username root --password "$$(cat /run/secrets/mongo_root_password)" --authenticationDatabase admin --eval 'try { rs.status().ok } catch (_) { rs.initiate({_id:"rs0",members:[{_id:0,host:"mongo:27017"}]}); }'; do sleep 2; done
+
+  mongo-bootstrap:
+    image: mongo:8.0
+    restart: 'no'
+    depends_on:
+      mongo-replica-init: { condition: service_completed_successfully }
+    secrets: [mongo_root_password, mongo_indexer_password, mongo_api_password]
+    volumes:
+      - ./mongo/create-users.mjs:/bootstrap/create-users.mjs:ro
+    networks: [data]
+    command:
+      - bash
+      - -ec
+      - |
+        export MONGO_INDEXER_PASSWORD="$$(cat /run/secrets/mongo_indexer_password)"
+        export MONGO_API_PASSWORD="$$(cat /run/secrets/mongo_api_password)"
+        mongosh --quiet --host mongo --username root --password "$$(cat /run/secrets/mongo_root_password)" --authenticationDatabase admin /bootstrap/create-users.mjs
+
+  indexer:
+    build:
+      context: ../../../indexer
+      dockerfile: Dockerfile
+      args: { PACKAGE_NAME: indexer, APP_VERSION: v.0.0.1-nas-test }
+    restart: unless-stopped
+    depends_on:
+      mongo-bootstrap: { condition: service_completed_successfully }
+    env_file: ./config/indexer.env
+    networks: [app, data]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1536m
+    healthcheck:
+      test: [CMD-SHELL, 'curl --fail http://localhost:8080/actuator/health/liveness']
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    logging: *logging
+
+  api:
+    build:
+      context: ../../../indexer
+      dockerfile: Dockerfile
+      args: { PACKAGE_NAME: api, APP_VERSION: v.0.0.1-nas-test }
+    restart: unless-stopped
+    depends_on:
+      mongo-bootstrap: { condition: service_completed_successfully }
+    env_file: ./config/api.env
+    networks: [app, data]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 768m
+    healthcheck:
+      test: [CMD-SHELL, 'curl --fail http://localhost:8080/actuator/health/liveness']
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    logging: *logging
+
+  frontend:
+    build:
+      context: ../../../dao
+      dockerfile: Dockerfile
+      args:
+        APP_BUILD_ENV: staging
+        NEXT_PUBLIC_APP_ENV: testnet-staging
+        NEXT_PUBLIC_NAS_TEST_INDEXER_URL: ${NAS_TEST_INDEXER_URL:?Set NAS_TEST_INDEXER_URL in config/.env}
+        NEXT_PUBLIC_NAS_TEST_REPUTATION_URL: ${NAS_TEST_REPUTATION_URL:-}
+        # Public URL only. The sponsor's signing key never belongs in this stack.
+        NEXT_PUBLIC_REVIEW_DELEGATOR_URL: ${REVIEW_DELEGATOR_URL:-}
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [app]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1024m
+    logging: *logging
+
+  proxy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      frontend: { condition: service_started }
+      api: { condition: service_healthy }
+    ports:
+      # Private by default; use a restricted SSH tunnel for browser access.
+      - '127.0.0.1:8088:80'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [app]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    logging: *logging
+
+secrets:
+  mongo_root_password: { file: ./config/mongo_root_password }
+  mongo_indexer_password: { file: ./config/mongo_indexer_password }
+  mongo_api_password: { file: ./config/mongo_api_password }
+
+networks:
+  app: {}
+  data: { internal: true }
+
+volumes:
+  mongo-data: {}
+  caddy-data: {}
+  caddy-config: {}

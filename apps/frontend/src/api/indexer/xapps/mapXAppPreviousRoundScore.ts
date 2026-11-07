@@ -13,10 +13,13 @@ export type AppScoreViewModel = {
   roundDate?: number
   roundDisplay: string
   breakdown: AppScoreBreakdownRow[]
+  partial: boolean
+  maximum: number
 }
 
 export const mapXAppPreviousRoundScore = (data: XAppPreviousRoundScore | null | undefined): AppScoreViewModel => {
-  const scoreDisplay = data?.score != null ? data.score.toFixed(2) : ""
+  const maximum = data?.maximum ?? 100
+  const scoreDisplay = data?.score != null ? `${data.score.toFixed(2)} / ${maximum}` : ""
   const rankDisplay = data?.rank != null ? String(data.rank) : ""
   const roundDate = data?.roundDate
   const roundDisplay = data?.round != null ? String(data.round) : ""
@@ -24,9 +27,13 @@ export const mapXAppPreviousRoundScore = (data: XAppPreviousRoundScore | null | 
   const breakdown: AppScoreBreakdownRow[] = [
     { labelKey: "Distribution Efficiency", value: data?.distribution ?? 0, max: 30 },
     { labelKey: "Activity", value: data?.activity ?? 0, max: 30 },
-    { labelKey: "Community", value: data?.community ?? 0, max: 30 },
-    { labelKey: "Profile Completeness", value: data?.health ?? 0, max: 10 },
+    ...(data?.partial
+      ? []
+      : [
+          { labelKey: "Community" as const, value: data?.community ?? 0, max: 30 },
+          { labelKey: "Profile Completeness" as const, value: data?.health ?? 0, max: 10 },
+        ]),
   ]
 
-  return { scoreDisplay, rankDisplay, roundDate, roundDisplay, breakdown }
+  return { scoreDisplay, rankDisplay, roundDate, roundDisplay, breakdown, partial: data?.partial ?? false, maximum }
 }

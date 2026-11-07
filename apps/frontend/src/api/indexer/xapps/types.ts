@@ -16,6 +16,12 @@ export type XAppPreviousRoundScore = {
   activity?: number
   community?: number
   health?: number
+  /** NAS historical scoring is deliberately partial: Activity + Distribution only. */
+  partial?: boolean
+  maximum?: number
+  source?: "nas-postgres"
+  formulaVersion?: string
+  newUserHistoryComplete?: boolean
 }
 
 export type XAppBadgeType = "topEcosystemDapp" | "topDistributionPerformer" | "navigatorsPick"

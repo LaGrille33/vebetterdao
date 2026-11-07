@@ -1,0 +1,35 @@
+services:
+  score-api:
+    profiles: [scores]
+    build:
+      context: ../../../indexer
+      dockerfile: tools/scoring-pilot/Dockerfile.nas-score-read-api
+    restart: unless-stopped
+    env_file: ./config/scoring-read-api.env
+    secrets: [scoring_reader_password]
+    networks: [app, scoring]
+    volumes:
+      - ./config/app-id-map.json:/run/config/app-id-map.json:ro
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:8789/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+    logging:
+      driver: json-file
+      options: { max-size: 5m, max-file: '3' }
+
+secrets:
+  scoring_reader_password: { file: ./config/scoring_reader_password }
+
+networks:
+  scoring:
+    external: true
+    # The operator supplies the exact private Docker network of the existing
+    # scoring-pilot database. No port is published between Compose projects.
+    name: ${SCORING_PILOT_NETWORK:?Set SCORING_PILOT_NETWORK in config/.env}

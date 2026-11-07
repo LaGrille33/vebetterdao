@@ -35,5 +35,10 @@ export const useUpdateRating = ({
     [],
   )
 
-  return useBuildTransaction({ clauseBuilder: buildClauses, onSuccess, onFailure })
+  return useBuildTransaction({
+    clauseBuilder: buildClauses,
+    onSuccess,
+    onFailure,
+    delegationUrl: process.env.NEXT_PUBLIC_REVIEW_DELEGATOR_URL,
+  })
 }

@@ -1,0 +1,21 @@
+:80 {
+  header {
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    X-Frame-Options DENY
+  }
+
+  handle_path /indexer/* {
+    reverse_proxy api:8080
+  }
+
+  # Available only when compose.scores.yaml is explicitly enabled. This endpoint
+  # reads one operator-selected completed Postgres run and has no write route.
+  handle_path /reputation/* {
+    reverse_proxy score-api:8789
+  }
+
+  handle {
+    reverse_proxy frontend:3000
+  }
+}

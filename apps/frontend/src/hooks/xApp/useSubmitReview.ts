@@ -39,5 +39,11 @@ export const useSubmitReview = ({
     [],
   )
 
-  return useBuildTransaction({ clauseBuilder: buildClauses, onSuccess, onFailure })
+  return useBuildTransaction({
+    clauseBuilder: buildClauses,
+    onSuccess,
+    onFailure,
+    // A separate endpoint keeps review gas sponsorship scoped to this action.
+    delegationUrl: process.env.NEXT_PUBLIC_REVIEW_DELEGATOR_URL,
+  })
 }

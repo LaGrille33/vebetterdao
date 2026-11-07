@@ -1,0 +1,10 @@
+config/.env
+config/indexer.env
+config/api.env
+config/mongo-keyfile
+config/mongo_root_password
+config/mongo_indexer_password
+config/mongo_api_password
+config/scoring-read-api.env
+config/scoring_reader_password
+config/app-id-map.json

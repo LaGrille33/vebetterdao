@@ -77,6 +77,8 @@ export type AppConfig = {
   veDelegateContractAddress: string
   nodeUrl: string
   indexerUrl?: string
+  /** NAS-only, read-only historical score adapter. Never carries database credentials. */
+  reputationScoreUrl?: string
   xAppReviewManagerContractAddress?: string
   network: Network
 
@@ -84,24 +86,58 @@ export type AppConfig = {
   externalContractIntegrations?: ExternalContractIntegrations
 }
 
+const getNasTestPublicUrl = (
+  appEnv: EnvConfig,
+  variable: "NEXT_PUBLIC_NAS_TEST_INDEXER_URL" | "NEXT_PUBLIC_NAS_TEST_REPUTATION_URL",
+): string | undefined => {
+  // This deliberately applies only to testnet-facing builds.  The URL is public build
+  // configuration for the browser, never a database credential.
+  if (appEnv !== AppEnv.TESTNET && appEnv !== AppEnv.TESTNET_STAGING) return undefined
+  const value = process.env[variable]
+  if (!value) return undefined
+
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new Error(`${variable} must be an absolute http(s) URL`)
+  }
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+    throw new Error(`${variable} must be a credential-free http(s) URL`)
+  }
+  return url.toString().replace(/\/$/, "")
+}
+
 export const getConfig = (env?: EnvConfig): AppConfig => {
   const appEnv = env || process.env.NEXT_PUBLIC_APP_ENV
   if (!appEnv) throw new Error("NEXT_PUBLIC_APP_ENV env variable must be set or a type must be passed to getConfig()")
 
-  switch (appEnv) {
-    case AppEnv.LOCAL:
-      return localConfig
-    case AppEnv.E2E:
-      return e2eConfig
-    case AppEnv.TESTNET_STAGING:
-      return stagingConfig
-    case AppEnv.TESTNET:
-      return testnetConfig
-    case AppEnv.MAINNET:
-      return mainnetConfig
-    default:
-      throw new Error(`Unsupported NEXT_PUBLIC_APP_ENV ${appEnv}`)
-  }
+  const config = (() => {
+    switch (appEnv) {
+      case AppEnv.LOCAL:
+        return localConfig
+      case AppEnv.E2E:
+        return e2eConfig
+      case AppEnv.TESTNET_STAGING:
+        return stagingConfig
+      case AppEnv.TESTNET:
+        return testnetConfig
+      case AppEnv.MAINNET:
+        return mainnetConfig
+      default:
+        throw new Error(`Unsupported NEXT_PUBLIC_APP_ENV ${appEnv}`)
+    }
+  })()
+
+  const nasTestIndexerUrl = getNasTestPublicUrl(appEnv, "NEXT_PUBLIC_NAS_TEST_INDEXER_URL")
+  const nasTestReputationUrl = getNasTestPublicUrl(appEnv, "NEXT_PUBLIC_NAS_TEST_REPUTATION_URL")
+  return nasTestIndexerUrl || nasTestReputationUrl
+    ? {
+        ...config,
+        ...(nasTestIndexerUrl ? { indexerUrl: nasTestIndexerUrl } : {}),
+        ...(nasTestReputationUrl ? { reputationScoreUrl: nasTestReputationUrl } : {}),
+      }
+    : config
 }
 
 export { getContractsConfig, getEnvDatadogApp, getEnvDatadogClient, getEnvDatadogEnv, getEnvMixPanel }

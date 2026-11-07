@@ -69,7 +69,7 @@ export const AppScoreCard = () => {
                     </Text>
                   </Skeleton>
                   <Text textStyle="sm" color="text.subtle">
-                    {t("App Score")}
+                    {scoreData.partial ? "Historical test score — Activity + Distribution" : t("App Score")}
                   </Text>
                 </Stack>
                 <Stack gap={1}>

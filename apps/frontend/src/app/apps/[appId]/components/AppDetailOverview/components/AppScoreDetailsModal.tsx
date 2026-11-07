@@ -93,6 +93,13 @@ export const AppScoreDetailsModal = ({ isOpen, onClose, scoreData, isLoading }: 
         <Box bg="#F9F9FA" rounded="xl" p={{ base: 3, md: 4 }} w="full">
           <VStack align="stretch" gap={4}>
             <Heading size="md">{t("App Score Rules")}</Heading>
+            {scoreData.partial ? (
+              <Text textStyle="xs" color="text.subtle">
+                {"Historical NAS test score: Activity and Distribution only, out of "}
+                {scoreData.maximum}
+                {". Community and Profile are not included."}
+              </Text>
+            ) : null}
             <Text textStyle="xs" color="text.subtle">
               {t("App score rules intro")}
             </Text>
